@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clean 21 — Planificador</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f8f9fa;color:#1a1a1a;padding:0}
+.app{max-width:1100px;margin:0 auto;padding:1.25rem}
+h1{font-size:20px;font-weight:600;color:#1a1a1a;margin-bottom:1.25rem}
+h1 span{font-size:13px;font-weight:400;color:#888;margin-left:8px}
+.tabs{display:flex;gap:6px;margin-bottom:1.25rem;border-bottom:1px solid #e5e5e5;padding-bottom:10px}
+.tab{padding:7px 18px;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;color:#666;background:#fff;transition:all .15s}
+.tab.on{background:#fff;border-color:#333;color:#1a1a1a;font-weight:500}
+.view{display:none}.view.on{display:block}
+/* semana */
+.week-sel{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;padding:10px 14px;background:#fff;border:1px solid #e5e5e5;border-radius:10px}
+.week-sel label{font-size:13px;color:#666}
+.wbtn{padding:5px 16px;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;background:#fff;color:#666}
+.wbtn.on{background:#e8f0fe;border-color:#4285f4;color:#1a56db;font-weight:500}
+.week-note{font-size:12px;color:#aaa;margin-left:6px}
+/* grid planificador */
+.tbl-wrap{overflow-x:auto}
+table.grid{width:100%;border-collapse:collapse;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;background:#fff}
+table.grid th{background:#f3f4f6;padding:8px 6px;font-size:11px;font-weight:600;color:#666;border:1px solid #e5e5e5;text-align:center}
+table.grid td.lbl{background:#f9fafb;padding:8px 10px;font-size:12px;font-weight:600;color:#444;border:1px solid #e5e5e5;white-space:nowrap;min-width:90px}
+table.grid td.lbl small{display:block;font-weight:400;color:#aaa;font-size:10px}
+table.grid td.cel{border:1px solid #e5e5e5;padding:3px;vertical-align:middle}
+table.grid td.cel select{width:100%;border:none;font-size:11px;padding:4px 3px;background:transparent;color:#333;cursor:pointer;border-radius:4px;min-width:120px}
+table.grid td.cel select:focus{outline:1px solid #4285f4;background:#e8f0fe}
+table.grid td.cel select.filled{background:#f0fdf4;color:#166534}
+/* compras */
+.sec-hdr{padding:7px 12px;font-size:12px;font-weight:600;color:#444;background:#f3f4f6;border-radius:8px;margin:1rem 0 3px}
+.ing-list{border:1px solid #e5e5e5;border-radius:8px;overflow:hidden;margin-bottom:4px;background:#fff}
+.ing-hdr-row{display:grid;grid-template-columns:1fr 160px 40px;border-bottom:1px solid #e5e5e5;background:#f9fafb}
+.ing-hdr-row span{padding:5px 10px;font-size:11px;font-weight:600;color:#aaa}
+.ing-row{display:grid;grid-template-columns:1fr 160px 40px;border-bottom:1px solid #f0f0f0}
+.ing-row:last-child{border-bottom:none}
+.ing-row.done{background:#f0fdf4;text-decoration:line-through;color:#aaa}
+.ic{padding:7px 10px;font-size:13px;color:#1a1a1a}
+.ic.amts{color:#1a56db;font-weight:500;font-size:12px}
+.ic.chk{text-align:center;display:flex;align-items:center;justify-content:center}
+.ic.chk input{cursor:pointer;width:16px;height:16px}
+.no-sel{font-size:13px;color:#aaa;padding:2rem;text-align:center;border:1px solid #e5e5e5;border-radius:10px;background:#fff}
+/* recetas */
+.search-box{width:100%;padding:9px 14px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:1rem;background:#fff;color:#1a1a1a}
+.search-box:focus{outline:none;border-color:#4285f4}
+.cat-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
+.cfbtn{padding:4px 13px;border:1px solid #ddd;border-radius:20px;cursor:pointer;font-size:11px;color:#666;background:#fff}
+.cfbtn.on{border-color:#4285f4;background:#e8f0fe;color:#1a56db;font-weight:500}
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.rec-card{border:1px solid #e5e5e5;border-radius:10px;padding:11px 13px;cursor:pointer;background:#fff;transition:all .15s}
+.rec-card:hover{border-color:#4285f4;background:#e8f0fe}
+.rec-card .cat{font-size:10px;color:#aaa;margin-bottom:3px}
+.rec-card .nom{font-size:13px;font-weight:500;color:#1a1a1a;line-height:1.35}
+/* modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.on{display:flex}
+.modal{background:#fff;border-radius:14px;border:1px solid #e5e5e5;padding:1.5rem;max-width:500px;width:92%;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:3px;color:#1a1a1a;padding-right:28px}
+.modal .mcat{font-size:11px;color:#aaa;margin-bottom:1.25rem}
+.modal .msec{font-size:11px;font-weight:600;color:#888;margin:14px 0 7px;text-transform:uppercase;letter-spacing:.04em}
+.modal .ing-item{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+.modal .ing-item:last-child{border-bottom:none}
+.modal .ing-amt{color:#1a56db;font-weight:500;white-space:nowrap;margin-left:10px;font-size:12px}
+.modal .paso{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px;line-height:1.55;color:#333}
+.modal .paso:last-child{border-bottom:none}
+.modal .paso .n{font-weight:600;color:#4285f4;min-width:20px;padding-top:1px}
+.close-btn{position:absolute;top:1.25rem;right:1.25rem;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;line-height:1}
+.modal{position:relative}
+/* responsive */
+@media(max-width:600px){
+  .app{padding:.75rem}
+  .rec-grid{grid-template-columns:1fr 1fr}
+  table.grid td.cel select{min-width:100px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🌿 Clean 21 <span>Programa Alejandro Junger</span></h1>
+
+  <div class="tabs">
+    <button class="tab on" onclick="showTab('plan')">Planificador</button>
+    <button class="tab" onclick="showTab('compras')">Lista de compras</button>
+    <button class="tab" onclick="showTab('recetas')">Recetas</button>
+  </div>
+
+  <div id="view-plan" class="view on">
+    <div class="week-sel">
+      <label>Semana:</label>
+      <button class="wbtn on" onclick="setWeek(1)">1</button>
+      <button class="wbtn" onclick="setWeek(2)">2</button>
+      <button class="wbtn" onclick="setWeek(3)">3</button>
+      <span class="week-note">Selecciona recetas en cada celda — los cambios se guardan automáticamente</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="grid" id="plan-table">
+        <tr>
+          <th>Tiempo</th>
+          <th>Lunes</th><th>Martes</th><th>Miércoles</th>
+          <th>Jueves</th><th>Viernes</th><th>Sábado</th><th>Domingo</th>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="view-compras" class="view">
+    <div id="compras-content"></div>
+  </div>
+
+  <div id="view-recetas" class="view">
+    <input class="search-box" id="rec-search" placeholder="Buscar receta..." oninput="filterRecetas()">
+    <div class="cat-filter" id="cat-filter"></div>
+    <div class="rec-grid" id="rec-grid"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const TIEMPOS=[
+  {lbl:'Desayuno',tipo:'liq'},
+  {lbl:'Media Mañana',tipo:'liq'},
+  {lbl:'Comida',tipo:'sol'},
+  {lbl:'Merienda',tipo:'liq'},
+  {lbl:'Cena',tipo:'liq'},
+];
+const CATS=['Base','Batido','Sopa','Jugo','Pescado','Pollo/Cordero','Vegetariana'];
+
+const RECETAS={
+  'Leche de Coco Básica':{cat:'Base',ings:[['Coco seco sin azúcar','½ taza'],['Agua tibia','2 tazas']],pasos:['Remojar el coco en agua tibia 15 minutos.','Colar con colador fino.','Usar el mismo día. Alternativa: agua de coco + 3 nueces de macadamia o ⅛ aguacate para más cuerpo.']},
+  'Leche de Nuez Básica':{cat:'Base',ings:[['Almendras u otras nueces','½ taza'],['Extracto de vainilla','½ cdita'],['Jarabe de agave','¾ cdita'],['Agua purificada','1½ tazas']],pasos:['Remojar las nueces 3 horas en agua purificada. No usar cacahuates.','Escurrir y desechar el agua de remojo.','Licuar con vainilla, agave y 1½ tazas de agua 3 minutos.','Colar con colador fino o estopilla. Refrigerar máximo 2 días.']},
+  'Batido Verde':{cat:'Batido',ings:[['Leche de almendras','¾ taza'],['Agua de coco','¼ taza'],['Col rizada (hoja)','1 pieza'],['Aguacate','⅛ pieza'],['Mango','¼ taza'],['Hielo','¼ taza']],pasos:['Colocar todos los ingredientes en la licuadora.','Licuar hasta obtener mezcla homogénea.','Servir de inmediato.']},
+  'Batido Col, Piña y Chía':{cat:'Batido',ings:[['Piña','¼ taza'],['Col rizada (hoja)','1 pieza'],['Semillas de chía remojadas','1 cdita'],['Agua pura','½ taza'],['Jarabe de agave','¾ cdita'],['Hielo','¼ taza']],pasos:['Remojar las semillas de chía unas horas antes (opcional pero recomendado).','Licuar todos los ingredientes hasta que quede homogéneo.','Servir.']},
+  'Batido Mango y Leche de Coco':{cat:'Batido',ings:[['Mango','½ taza'],['Piña','¼ taza'],['Leche de coco','¾ taza'],['Jarabe de agave','¾ cdita'],['Hielo','¼ taza']],pasos:['Licuar todos los ingredientes hasta consistencia suave.','Usar leche de coco casera o enlatada sin aditivos.']},
+  'Batido Arándanos y Algarrobo':{cat:'Batido',ings:[['Arándanos','½ taza'],['Leche de almendras','¾ taza'],['Jarabe de agave','¾ cdita'],['Polvo de cacao/algarrobo','1 cdita'],['Hielo','¼ taza']],pasos:['Licuar todos los ingredientes hasta que quede homogéneo.','Preferir cacao crudo sin procesar por mayor contenido nutricional.']},
+  'Batido Energético Mantequilla Almendra':{cat:'Batido',ings:[['Mantequilla de almendras','2 cdas'],['Cardamomo molido','½ cdita'],['Agua pura','¾ taza'],['Duraznos congelados','½ taza'],['Jarabe de agave','¾ cdita'],['Hielo','¼ taza']],pasos:['Licuar todos los ingredientes hasta consistencia cremosa.','Alternativa: sustituir por tahini o mantequilla de semillas de calabaza.']},
+  'Batido Bayas Leche de Coco y Canela':{cat:'Batido',ings:[['Arándanos y frambuesas','1 taza'],['Leche de coco','¾ taza'],['Aguacate','⅛ pieza'],['Canela molida','½ cdita'],['Jarabe de agave','¾ cdita'],['Hielo','¼ taza']],pasos:['Licuar todos los ingredientes hasta que quede homogéneo.','Servir de inmediato.']},
+  'Batido Tropical':{cat:'Batido',ings:[['Piña y mango','¾ taza'],['Puré de maracuyá','1 cda'],['Leche de nuez','¾ taza'],['Hielo','¼ taza']],pasos:['Licuar todos los ingredientes hasta consistencia suave.','Opcional: agregar menta fresca al servir.','Sin maracuyá: sustituir por más piña.']},
+  'Sopa Pepino con Menta':{cat:'Sopa',ings:[['Pepinos','1½ piezas'],['Limón pelado','½ pieza'],['Piñones','2 cdas'],['Agua pura','2 tazas'],['Menta fresca','2 cdas'],['Aceite de oliva','1 cda']],pasos:['Licuar a velocidad alta pepinos, limón, piñones, agua y aceite durante 3 minutos.','Agregar la menta y licuar 15 segundos más.','Servir frío.']},
+  'Sopa Espinacas y Dulse':{cat:'Sopa',ings:[['Calabacín','½ pieza'],['Tallo de apio','½ pieza'],['Cebolleta','½ pieza'],['Copos de dulse','2 cdas'],['Aguacate','⅛ pieza'],['Espinacas','1 taza'],['Agua pura','2 tazas'],['Aceite de oliva','½ cda']],pasos:['Licuar todos los ingredientes a velocidad alta 3 minutos.','Sazonar con sal marina al gusto.','Servir con guarnición de dulse y un chorrito de aceite.']},
+  'Gazpacho Piña y Aguacate':{cat:'Sopa',ings:[['Piña en cubitos','1 taza'],['Aguacate','½ pieza'],['Chile jalapeño','¼ pieza'],['Jugo de lima','½ pieza'],['Sal marina','¼ cdita']],pasos:['Cortar piña y aguacate en cubitos. Mezclar con jalapeño, sal y lima.','Licuar la mitad y verter sobre la porción sin licuar.','Servir frío con brotes o cilantro.']},
+  'Sopa Calabacín y Albahaca':{cat:'Sopa',ings:[['Calabacín','½ pieza'],['Apio','½ tallo'],['Hojas de albahaca','3 piezas'],['Aguacate','⅛ pieza'],['Agua pura','2 tazas'],['Aceite de oliva','½ cda']],pasos:['Licuar todos los ingredientes a velocidad alta.','Adornar con albahaca fresca en tiras al servir.']},
+  'Bisque de Auyama':{cat:'Sopa',ings:[['Auyama (calabaza)','¾ taza'],['Apio','1 tallo'],['Calabacín amarillo','¼ taza'],['Cúrcuma','⅛ cdita'],['Vinagre de manzana','½ cdita'],['Agua','2 tazas'],['Aceite de oliva','½ cda']],pasos:['Licuar todos los ingredientes.','Verificar sazón y ajustar sal.','Adornar con perejil, brotes o semillas de girasol.']},
+  'Sopa Auyama y Manzana':{cat:'Sopa',ings:[['Auyama (calabaza)','1 taza'],['Apio','1 tallo'],['Manzanas verdes','1 pieza'],['Piñones','2 cdas'],['Vinagre de manzana','½ cdita'],['Estragón fresco','2 cdas'],['Agua pura','2 tazas']],pasos:['Licuar todos los ingredientes excepto el estragón a velocidad alta.','Verificar sazón.','Agregar el estragón y licuar solo 10 segundos.','Servir tibio o a temperatura ambiente.']},
+  'Sopa Zanahoria y Jengibre':{cat:'Sopa',ings:[['Auyama (calabaza)','¾ taza'],['Zanahorias','1 taza'],['Calabacín amarillo','¾ taza'],['Jengibre fresco','trozo 2cm'],['Aceite de oliva','1 cda'],['Vinagre de manzana','¾ cda'],['Agua pura','2 tazas']],pasos:['Extraer el jugo del jengibre con extractor o rallarlo fino.','Licuar todos los ingredientes a velocidad alta 3 minutos.','Servir tibio. Rociar con aceite y hierbas frescas.']},
+  'Jugo Verde':{cat:'Jugo',ings:[['Manzanas verdes','1 pieza'],['Apio','1½ tallos'],['Col rizada','½ hoja'],['Acelga','½ hoja'],['Repollo','⅛ pieza'],['Brócoli','½ cabeza'],['Pepino','¼ pieza'],['Limón','¼ pieza']],pasos:['Pasar todos los ingredientes por el extractor de jugos.','Consumir de inmediato o refrigerar tapado máximo 24 horas.']},
+  'Jugo Manzana Col y Brotes':{cat:'Jugo',ings:[['Manzanas','1 pieza'],['Brotes de girasol','1 taza'],['Pepino','¼ pieza'],['Col (hoja)','½ pieza'],['Rábano daikon','½ taza'],['Limón pelado','½ pieza']],pasos:['Pasar todos los ingredientes por el extractor.','Consumir fresco o refrigerar máximo 24 horas.']},
+  'Jugo Manzana Jengibre y Espinaca':{cat:'Jugo',ings:[['Manzanas verdes','1 pieza'],['Jengibre fresco','trozo 1cm'],['Limón pelado','½ pieza'],['Espinacas','½ taza']],pasos:['Pasar todos los ingredientes por el extractor de jugos.','Servir de inmediato.']},
+  'Jugo Zanahoria Remolacha y Berros':{cat:'Jugo',ings:[['Zanahorias','1 pieza'],['Repollo blanco','⅛ pieza'],['Remolacha pequeña','½ pieza'],['Berros','½ taza']],pasos:['Pasar todos los ingredientes por el extractor.','La remolacha tiñe — usar ropa que no importe.','Consumir fresco.']},
+  'Jugo Hinojo y Manzana':{cat:'Jugo',ings:[['Manzanas verdes','1 pieza'],['Hinojo','1 cabeza'],['Limón pelado','¼ pieza']],pasos:['Pasar todos los ingredientes por el extractor.','Servir de inmediato.']},
+  'Jugo Pepino Repollo y Perejil':{cat:'Jugo',ings:[['Pepino mediano','½ pieza'],['Repollo blanco','1 taza'],['Perejil','½ taza'],['Limón pelado','¼ pieza']],pasos:['Pelar el pepino si no es orgánico.','Pasar todos los ingredientes por el extractor.','Servir fresco.']},
+  'Jugo Piña Lima y Menta':{cat:'Jugo',ings:[['Piña','1¼ tazas'],['Lima pelada','½ pieza'],['Menta fresca','2 cdas']],pasos:['Pasar todos los ingredientes por el extractor.','Servir de inmediato.']},
+  'Ensalada Berros e Hinojo con Atún':{cat:'Pescado',ings:[['Atún fresco','120g'],['Berros','1 taza'],['Aguacate','¼ taza'],['Hinojo','½ bulbo'],['Habichuelas','½ taza'],['Aceitunas negras','3 piezas'],['Aceite de oliva','1 cda'],['Limón','½ pieza']],pasos:['Mezclar berros, aguacate, hinojo, habichuelas, aceitunas, aceite y limón. Sazonar.','Calentar parrilla a fuego alto. Untar el atún con aceite y sazonar.','Dorar el atún 2 minutos por cada lado.','Servir la ensalada con el atún en rodajas encima.']},
+  'Lubina al Vapor con Hinojo y Alcaparras':{cat:'Pescado',ings:[['Lubina','150g'],['Hinojo','½ bulbo'],['Perejil italiano','½ taza'],['Alcaparras','½ cda'],['Limón','¼ pieza'],['Cebolla blanca','⅛ pieza'],['Aceite de oliva','1 cda']],pasos:['Hervir cebolla, hinojo y jugo de limón con agua 5 minutos.','Retirar del fuego. Agregar la lubina sazonada, espolvorear alcaparras y perejil. Tapar.','Cocinar a fuego lento 8-10 minutos.','Servir con verduras en la base y el pescado encima. Rociar con aceite.']},
+  'Salmón Asado con Grelo y Quinua':{cat:'Pescado',ings:[['Salmón silvestre','150g'],['Grelo','½ manojo'],['Dientes de ajo','1 pieza'],['Quinua','½ taza'],['Aceite de oliva','1 cda']],pasos:['Calentar horno a 200°C. Dorar el salmón en sartén 3 min un lado, 1 min el otro.','Pasar a bandeja y hornear 7-8 minutos.','Saltear ajo en la misma sartén. Agregar grelo con ¼ taza de agua, tapar 2 minutos.','Servir verduras con salmón encima y quinua al lado.']},
+  'Halibut en Papel con Aceitunas y Tomillo':{cat:'Pescado',ings:[['Halibut','150g'],['Aceitunas Kalamata','2 cdas'],['Tomillo','1 ramita'],['Limón','½ pieza'],['Calabacín','½ pieza'],['Aceite de oliva','1 cda']],pasos:['Calentar horno a 220°C. Cortar papel en círculo de 30cm y untar con aceite.','Colocar el halibut al centro. Cubrir con limón, calabacín y tomillo. Espolvorear aceitunas.','Doblar el papel y sellar los bordes.','Hornear 12-15 minutos en la parte baja del horno.','Servir en el papel y abrir en la mesa.']},
+  'Salmón y Espárragos con Pesto':{cat:'Pescado',ings:[['Salmón silvestre','150g'],['Espárragos','½ manojo'],['Ensalada mesclun/rúcula','2 tazas'],['Albahaca fresca','1 manojo'],['Piñones','2 cdas'],['Aceite de oliva','¼ taza'],['Ajo','1 diente']],pasos:['Pesto: licuar albahaca, piñones y ajo. Agregar aceite con motor en marcha. Sazonar.','Asar espárragos en plancha 2 min por lado. Asar salmón 3 min por lado.','Mezclar ensalada con aceite, sal y limón.','Servir ensalada con espárragos y salmón. Cubrir el salmón con 1 cda de pesto.']},
+  'Atún Asiático con Verduras':{cat:'Pescado',ings:[['Atún','150g'],['Tamari sin trigo','¼ taza'],['Ajo','1 diente'],['Jengibre fresco','trozo 2cm'],['Zanahoria','½ pieza'],['Col china','½ pieza'],['Brócoli','½ taza'],['Calabacín','½ pieza'],['Aceite de sésamo','½ cdita']],pasos:['Marinar el atún en tamari, jengibre, ajo y jarabe de arce. Ensartar en pinchos.','Asar los pinchos 1-2 minutos por lado. Reservar.','Saltear zanahoria, brócoli y calabacín en sartén caliente 2 minutos.','Agregar col china con ¼ taza de agua, tapar 1 minuto.','Servir verduras con los pinchos encima.']},
+  'Pargo con Alcaparras y Tomillo':{cat:'Pescado',ings:[['Pargo','180g'],['Alcaparras','2 cdas'],['Limón (ralladura)','½ pieza'],['Tomillo','1 ramita'],['Acelgas','2 tazas'],['Aceite de oliva','½ cda']],pasos:['Calentar horno a 220°C.','Colocar el pargo con ralladura de limón, alcaparras, tomillo y aceite en molde. Tapar con aluminio.','Hornear 15 minutos.','Saltear acelgas en sartén tapada 2 minutos.','Servir el pescado sobre las acelgas con los jugos del molde.']},
+  'Pilaf Pollo con Vinagre Balsámico':{cat:'Pollo/Cordero',ings:[['Pechuga de pollo','1 pieza'],['Vinagre balsámico','¾ taza'],['Romero','1 cda'],['Arroz silvestre cocido','1 taza'],['Cebolletas','1 pieza'],['Semillas de girasol','2 cdas'],['Aceite de oliva','1 cda']],pasos:['Calentar horno a 220°C. Reducir vinagre balsámico a jarabe. Agregar ajo y romero 2 min.','Hornear pollo untado con aceite y sal 10 minutos.','Untar con mezcla balsámica, bajar a 190°C. Hornear 10 min más. Untar y cocinar 2 min.','Cortar en rodajas. Mezclar con arroz, cebolletas y semillas de girasol.']},
+  'Pollo con Fideos de Alforfón':{cat:'Pollo/Cordero',ings:[['Fideos de alforfón','½ paquete'],['Pechuga de pollo','1 pieza'],['Zanahorias','1 pieza'],['Brócoli','½ taza'],['Guisantes','½ taza'],['Col china','½ taza'],['Calabacín','½ pieza'],['Tamari sin trigo','½ cda'],['Aceite de sésamo','½ cdita']],pasos:['Cocer fideos 3 min, escurrir, enjuagar con agua fría y mezclar con aceite de sésamo.','Asar pollo a la plancha y cortar en rodajas.','Saltear ajo y jengibre 1 min. Agregar verduras poco a poco. Añadir tamari y agua.','Agregar guisantes el último minuto.','Mezclar con fideos y servir con el pollo al lado.']},
+  'Ensalada Quinua con Pollo':{cat:'Pollo/Cordero',ings:[['Quinua cocida','1 taza'],['Pechuga de pollo','120g'],['Pasas','2 cdas'],['Almendras picadas','2 cdas'],['Zanahoria','¼ taza'],['Menta','2 cdas'],['Jugo de lima','2 cdas'],['Aceite de oliva','¼ taza'],['Ensalada verde','2 tazas']],pasos:['Cocer la pechuga al vapor en sartén tapada con ½ cm de agua 6 minutos. Cortar en rodajas.','Mezclar quinua con pasas, almendras, zanahoria, menta, lima, agave, comino y aceite.','Servir montículo de quinua con ensalada verde al lado y el pollo encima.']},
+  'Chuletas de Cordero y Espárragos':{cat:'Pollo/Cordero',ings:[['Espárragos','¼ lb'],['Chuletas de cordero','2 piezas'],['Romero fresco','½ cda'],['Ajo','1 diente'],['Mostaza de Dijon','½ cda'],['Aceite de oliva','½ cda']],pasos:['Cocer espárragos al vapor 3 minutos (al dente). Escurrir y reservar.','Hacer pasta con aceite, romero, ajo y mostaza. Untar las chuletas.','Asar o planchar a fuego alto 3-4 minutos.','Servir las chuletas sobre los espárragos.']},
+  'Pechuga Pollo Verduras a la Plancha':{cat:'Pollo/Cordero',ings:[['Pechuga de pollo','120g'],['Calabacín verde','½ pieza'],['Calabacín amarillo','½ pieza'],['Seta portobello','½ pieza'],['Espárragos','3 piezas'],['Tamari sin trigo','½ cdita'],['Aceite de oliva','1½ cdas']],pasos:['Marinar la seta en tamari con aceite.','Calentar plancha. Untar pollo con aceite y sazonar.','Asar verduras (menos la seta) 1½ min por lado. Reservar.','Asar la seta 2 min por lado. Asar el pollo 3 min por lado.','Servir las verduras como base con el pollo encima.']},
+  'Lomo Cordero al Perejil y Mostaza':{cat:'Pollo/Cordero',ings:[['Lomo de cordero','120g'],['Mostaza de Dijon','2 cdas'],['Perejil picado','½ taza'],['Espinacas baby','2 tazas'],['Aceitunas negras','2 cdas'],['Aceite de oliva','1 cda'],['Limón','½ cda']],pasos:['Calentar horno a 220°C. Mezclar ajo, mostaza y perejil en pasta.','Cubrir el cordero con la pasta. Sazonar y reposar 30 minutos.','Hornear sin tapar 15 min. Dar vuelta y cocinar 5 min más.','Reposar 5 min y cortar en rebanadas finas.','Servir sobre espinacas con aceite, limón y aceitunas.']},
+  'Cordero Marroquí con Quinua':{cat:'Pollo/Cordero',ings:[['Chuletas de cordero','2 piezas'],['Comino molido','⅛ cdita'],['Cardamomo','⅛ cdita'],['Jengibre molido','⅛ cdita'],['Canela','⅛ cdita'],['Ajo','1 diente'],['Quinua cocida','1 taza'],['Col rizada al vapor','2 tazas'],['Aceite de oliva','1 cda']],pasos:['Mezclar todas las especias con sal.','Frotar el ajo sobre las chuletas y espolvorear con especias.','Cocinar en sartén con aceite a fuego medio-alto 6 minutos, girando una vez.','Adornar con perejil y menta. Servir con quinua y col al vapor.']},
+  'Macro Bol con Miso y Jengibre':{cat:'Vegetariana',ings:[['Calabaza kabocha','1 cuña'],['Coliflor','½ taza'],['Col china','1 pieza'],['Quinua o arroz integral','1 taza'],['Frijol adzuki','1 taza'],['Algas hijiki/wakame','½ taza'],['Miso blanco','2 cdas'],['Aceite de oliva','2 cdas']],pasos:['Cocer la calabaza al vapor 3 minutos. Cocer el resto de verduras 3 minutos.','Salsa miso: procesar jengibre, ajo, miso, limón y aceite. Agregar agua si se desea más líquida.','Organizar en tazón: frijoles, quinua, verduras y calabaza.','Poner algas encima y adornar con cilantro. Servir salsa al lado.']},
+  'Triple Ensalada Hummus Tabulé Col':{cat:'Vegetariana',ings:[['Garbanzos cocidos','½ taza'],['Tahini','2 cdas'],['Quinua cocida','1 taza'],['Pasas','2 cdas'],['Almendras','2 cdas'],['Zanahoria','¼ taza'],['Col rizada','1 taza'],['Rábanos','2 piezas'],['Piñones','1 cda'],['Aceite de oliva','1 cda']],pasos:['Hummus: procesar garbanzos, tahini, limón, sal, comino y ajo. Agregar agua si es necesario.','Tabulé: mezclar quinua con pasas, almendras, zanahoria, menta, perejil, limón y aceite. Reposar 20 min.','Col marinada: mezclar col en tiras con rábanos, piñones, aceite y limón.','Servir los tres en un mismo plato con pepino y zanahoria.']},
+  'Ensalada de Lentejas':{cat:'Vegetariana',ings:[['Lentejas verdes','½ taza'],['Jengibre rallado','½ cda'],['Piña','2 cdas'],['Aceite de oliva','2 cdas'],['Calabacín','½ taza'],['Pepino','½ taza'],['Zanahoria','⅜ taza'],['Cilantro','2 cdas'],['Ensalada verde','1 taza'],['Lima','½ pieza']],pasos:['Cocer lentejas en 1½ tazas de agua a fuego lento 30 minutos. Escurrir y enfriar.','Aderezo: mezclar comino, cúrcuma, jengibre, ajo, lima, aceite y sal. Agregar piña.','Mezclar lentejas con verduras. Agregar aderezo y reposar 5 minutos.','Servir sobre ensalada verde.']},
+  'Gran Ensalada Verde':{cat:'Vegetariana',ings:[['Lechuga romana','¼ pieza'],['Rúcula','½ manojo'],['Zanahoria rallada','½ pieza'],['Rábanos','3 piezas'],['Pepino','½ pieza'],['Aguacate','½ pieza'],['Brotes de girasol','½ puñado'],['Almendras remojadas','2 cdas'],['Aceite de pepitas de uva','¼ taza'],['Limón','¼ pieza']],pasos:['Aderezo: agitar limón, agave, ajo, hierbas y aceite de pepitas en frasco tapado.','Mezclar verduras con el aderezo.','Decorar con aguacate, brotes y almendras.','Opcional: agregar 60g de camarón o pollo.']},
+  'Rollitos Tailandeses con Almendras':{cat:'Vegetariana',ings:[['Mantequilla de almendras','½ cda'],['Jengibre rallado','½ cdita'],['Tamari sin trigo','½ cdita'],['Lechuga romana (hojas)','2 piezas'],['Repollo Napa rallado','¼ pieza'],['Zanahoria rallada','½ pieza'],['Pepino','½ pieza'],['Alga Nori','2 hojas']],pasos:['Salsa: mezclar mantequilla de almendras, jengibre, limón, vinagre, ajo y tamari hasta cremoso.','Poner ¼ de las verduras en cada hoja de lechuga y enrollar.','Rociar con la salsa de almendras.','Adornar con cilantro y tiras de alga Nori.']},
+  'Frijoles Adzuki con Arroz Integral':{cat:'Vegetariana',ings:[['Frijoles adzuki','½ taza'],['Zanahoria','½ taza'],['Apio','¼ taza'],['Auyama/kabocha','½ taza'],['Alga kombu','½ hoja'],['Arroz integral','½ taza'],['Aceite de oliva','½ cda']],pasos:['Remojar frijoles 2 horas. Saltear cebolla, apio y zanahoria en aceite.','Agregar frijoles, kombu y 1½ tazas de agua. Hervir y cocer a fuego lento 40 min.','Cocer arroz integral tapado con ¾ taza de agua ~30 min.','Servir arroz con frijoles encima y adornar con hierbas.']},
+  'Rollitos Nori con Arroz de Nueces':{cat:'Vegetariana',ings:[['Semillas de girasol remojadas','½ taza'],['Nueces remojadas','½ taza'],['Hojas de alga Nori','2 hojas'],['Zanahoria','½ pieza'],['Pepino','½ pieza'],['Aguacate','¼ pieza'],['Lombarda','⅛ pieza'],['Tamari sin trigo','1 cda'],['Jengibre','trozo 2cm']],pasos:['Procesar semillas, nueces, cebolla y hierbas 2 minutos hasta textura de arroz.','Marinar jengibre en rodajas con vinagre y agua.','Distribuir el arroz de nueces en cada hoja de Nori. Agregar zanahoria, pepino, aguacate y lombarda.','Enrollar con fuerza y cortar en 6 piezas con cuchillo afilado.','Servir con jengibre marinado, wasabi y tamari.']},
+};
+
+const STORAGE_KEY='clean21_plan';
+let week=1;
+let plan=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{"1":{},"2":{},"3":{}}');
+let catFilter='Todas';
+
+function savePlan(){localStorage.setItem(STORAGE_KEY,JSON.stringify(plan));}
+
+function showTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',['plan','compras','recetas'][i]===t));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('view-'+t).classList.add('on');
+  if(t==='compras') renderCompras();
+  if(t==='recetas') renderRecetas();
+}
+
+function setWeek(w){
+  week=w;
+  document.querySelectorAll('.wbtn').forEach((b,i)=>b.classList.toggle('on',i+1===w));
+  renderPlan();
+}
+
+function renderPlan(){
+  const tbl=document.getElementById('plan-table');
+  while(tbl.rows.length>1) tbl.deleteRow(1);
+  TIEMPOS.forEach((t,ti)=>{
+    const tr=tbl.insertRow();
+    const lbl=tr.insertCell();
+    lbl.className='lbl';
+    lbl.innerHTML=`${t.lbl}<small>${t.tipo==='liq'?'líquido':'sólida'}</small>`;
+    DIAS.forEach((_,di)=>{
+      const td=tr.insertCell();
+      td.className='cel';
+      const sel=document.createElement('select');
+      const key=`${ti}-${di}`;
+      const cur=plan[week]?.[key]||'';
+      sel.innerHTML='<option value="">—</option>';
+      Object.entries(RECETAS).forEach(([nm,r])=>{
+        const isLiq=['Base','Batido','Sopa','Jugo'].includes(r.cat);
+        if(t.tipo==='liq'?isLiq:!isLiq){
+          const o=document.createElement('option');
+          o.value=nm; o.textContent=nm;
+          if(nm===cur) o.selected=true;
+          sel.appendChild(o);
+        }
+      });
+      if(cur) sel.classList.add('filled');
+      sel.onchange=()=>{
+        if(!plan[week]) plan[week]={};
+        plan[week][key]=sel.value;
+        sel.classList.toggle('filled',!!sel.value);
+        savePlan();
+      };
+      td.appendChild(sel);
+    });
+  });
+}
+
+function renderCompras(){
+  const div=document.getElementById('compras-content');
+  const totals={};
+  Object.entries(plan[week]||{}).forEach(([_,rec])=>{
+    if(!rec||!RECETAS[rec]) return;
+    RECETAS[rec].ings.forEach(([ing,amt])=>{
+      if(!totals[ing]) totals[ing]=[];
+      totals[ing].push(amt);
+    });
+  });
+  const ings=Object.keys(totals);
+  if(!ings.length){
+    div.innerHTML='<div class="no-sel">Selecciona recetas en el Planificador para generar la lista de compras.</div>';
+    return;
+  }
+  const SECS={
+    '🥦 Verduras y hortalizas':['col','espinaca','acelga','calabacín','brócoli','zanahoria','apio','pepino','aguacate','cebolleta','rábano','espárrago','hinojo','coliflor','repollo','berros','rúcula','lechuga','remolacha','grelo','seta','arvejas','guisantes','lombarda','habichuelas','col china'],
+    '🍋 Frutas y hierbas':['mango','piña','arándano','frambuesa','manzana','durazno','lima','limón','maracuyá','menta','albahaca','estragón','cilantro','perejil'],
+    '🥥 Frutos secos y semillas':['almendra','nuez','piñón','semilla','mantequilla de almendra','coco','agua de coco','tahini'],
+    '🫘 Legumbres y granos':['lenteja','garbanzo','frijol','adzuki','quinua','arroz','fideos','alforfón'],
+    '🐟 Proteína animal':['atún','salmón','lubina','halibut','pargo','pollo','cordero','lomo'],
+    '🫙 Despensa':['aceite','vinagre','tamari','mostaza','agave','arce','miso','alcaparra','aceituna','cacao','sal','cúrcuma','comino','cardamomo','canela','romero','tomillo','jengibre','ajo','vainilla','agua'],
+    '🌊 Algas':['alga','hijiki','wakame','kombu','nori','dulse'],
+  };
+  function getSec(ing){
+    const il=ing.toLowerCase();
+    for(const [s,kws] of Object.entries(SECS)){if(kws.some(k=>il.includes(k))) return s;}
+    return '📦 Otros';
+  }
+  const bySection={};
+  ings.forEach(ing=>{const s=getSec(ing);if(!bySection[s])bySection[s]=[];bySection[s].push(ing);});
+  let html='';
+  Object.entries(bySection).forEach(([sec,items])=>{
+    html+=`<div class="sec-hdr">${sec}</div><div class="ing-list">
+    <div class="ing-hdr-row"><span>Ingrediente</span><span>Cantidad(es)</span><span style="text-align:center">✓</span></div>`;
+    items.forEach(ing=>{
+      const amts=totals[ing].join(' + ');
+      html+=`<div class="ing-row" id="ir-${btoa(encodeURIComponent(ing)).replace(/=/g,'')}">
+        <div class="ic">${ing}</div>
+        <div class="ic amts">${amts}</div>
+        <div class="ic chk"><input type="checkbox" onchange="this.closest('.ing-row').classList.toggle('done',this.checked)"></div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  div.innerHTML=html;
+}
+
+function renderRecetas(){
+  const cf=document.getElementById('cat-filter');
+  if(!cf.children.length){
+    ['Todas',...CATS].forEach(c=>{
+      const b=document.createElement('button');
+      b.className='cfbtn'+(c==='Todas'?' on':'');
+      b.textContent=c;
+      b.onclick=()=>{catFilter=c;cf.querySelectorAll('.cfbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');filterRecetas();};
+      cf.appendChild(b);
+    });
+  }
+  filterRecetas();
+}
+
+function filterRecetas(){
+  const q=document.getElementById('rec-search').value.toLowerCase();
+  const grid=document.getElementById('rec-grid');
+  grid.innerHTML='';
+  Object.entries(RECETAS).forEach(([nm,r])=>{
+    if(catFilter!=='Todas'&&r.cat!==catFilter) return;
+    if(q&&!nm.toLowerCase().includes(q)) return;
+    const d=document.createElement('div');
+    d.className='rec-card';
+    d.innerHTML=`<div class="cat">${r.cat}</div><div class="nom">${nm}</div>`;
+    d.onclick=()=>showReceta(nm);
+    grid.appendChild(d);
+  });
+}
+
+function showReceta(nm){
+  const r=RECETAS[nm];
+  const mc=document.getElementById('modal-content');
+  mc.innerHTML=`
+    <button class="close-btn" onclick="document.getElementById('modal-overlay').classList.remove('on')">×</button>
+    <h3>${nm}</h3>
+    <div class="mcat">${r.cat}</div>
+    <div class="msec">Ingredientes — 1 persona</div>
+    ${r.ings.map(([i,a])=>`<div class="ing-item"><span>${i}</span><span class="ing-amt">${a}</span></div>`).join('')}
+    <div class="msec" style="margin-top:16px">Preparación</div>
+    ${r.pasos.map((p,i)=>`<div class="paso"><span class="n">${i+1}</span><span>${p}</span></div>`).join('')}
+  `;
+  document.getElementById('modal-overlay').classList.add('on');
+}
+
+function closeModal(e){
+  if(e.target===document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('on');
+}
+
+renderPlan();
+</script>
+</body>
+</html>
